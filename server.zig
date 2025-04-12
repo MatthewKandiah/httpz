@@ -5,11 +5,15 @@ const c = @cImport({
 
 const lib = @import("./lib.zig");
 
+const localhost_address = "127.0.0.1";
+const server_port = 6969;
+
 pub fn main() void {
     const platform = lib.Platform.init();
 
     const socket = lib.createSocket(platform);
-    lib.bind(platform, socket);
+    const sockaddr = lib.buildIpv4Addrinfo(platform, localhost_address, server_port);
+    lib.bind(platform, socket, sockaddr);
     lib.listen(platform, socket);
     const connection_info = lib.acceptConnection(platform, socket);
     var buf: [1024]u8 = .{0} ** 1024;

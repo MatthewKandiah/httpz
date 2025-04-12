@@ -62,8 +62,7 @@ pub fn buildIpv4Addrinfo(p: Platform, address: [:0]const u8, port: u16) std.os.l
     return result;
 }
 
-pub fn bind(p: Platform, socket: usize) void {
-    const sockaddr = buildIpv4Addrinfo(p, "127.0.0.1", 6969);
+pub fn bind(p: Platform, socket: usize, sockaddr: std.os.linux.sockaddr.in) void {
     const bind_res = std.os.linux.bind(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (bind_res == -1) {
         printLine(p.std_err, "ERROR - failed to bind socket");
