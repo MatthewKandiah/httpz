@@ -8,8 +8,55 @@ const lib = @import("./lib.zig");
 pub const localhost_address = "127.0.0.1";
 pub const server_port = 6969;
 
-pub fn main() void {
+const ServerArgs = struct {
+    ipv4_address: ?[:0]const u8,
+    port: ?u16,
+
+    const Self = @This();
+
+    fn init() Self {
+        return .{
+            .ipv4_address = null,
+            .port = null,
+        };
+    }
+
+    fn isValid(self: Self) bool {
+        return self.ipv4_address != null and self.port != null;
+    }
+};
+
+pub fn main() !void {
     lib.platformInit();
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    var args = try std.process.argsWithAllocator(allocator);
+    _ = args.next(); // skip program name
+    var server_args = ServerArgs.init();
+    while (args.next()) |arg| {
+        const flag = arg;
+        const value = args.next();
+        if (std.mem.eql(u8, flag, "--ipv4")) {
+            if (value) |ipv4_value| {
+                server_args.ipv4_address = try allocator.dupeZ(u8, ipv4_value);
+            } else {
+                lib.platform.reportError("missing ipv4 value", .{});
+            }
+        } else if (std.mem.eql(u8, flag, "--port")) {
+            if (value) |portValue| {
+                server_args.port = try std.fmt.parseInt(u16, portValue, 10);
+            } else {
+                lib.platform.reportError("missing port value", .{});
+            }
+        }
+    }
+    if (!server_args.isValid()) {
+        // TODO-Matt: nicer usage error
+        lib.platform.reportError("invalid arguments", .{});
+    }
+    args.deinit();
 
     const socket = lib.createSocket();
     const sockaddr = lib.buildIpv4Addrinfo(localhost_address, server_port);
