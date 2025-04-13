@@ -6,6 +6,8 @@ const c = @cImport({
     @cInclude("arpa/inet.h");
 });
 
+const backlog_size = 4096;
+
 pub const Platform = struct {
     std_out: File,
     std_err: File,
@@ -84,7 +86,7 @@ pub fn bind(socket: usize, sockaddr: std.os.linux.sockaddr.in) void {
 }
 
 pub fn listen(socket: usize) void {
-    const listen_res = std.os.linux.listen(@intCast(socket), 0);
+    const listen_res = std.os.linux.listen(@intCast(socket), backlog_size);
     if (listen_res == -1) {
         platform.reportError("failed to listen to socket", .{});
     } else {
@@ -139,6 +141,7 @@ pub fn write(socket: usize, data: []const u8) usize {
         platform.reportError("failed to write", .{});
     } else {
         platform.reportSuccess("wrote bytes to socket: {}", .{write_res});
+        platform.reportSuccess("wrote data: {s}", .{data[0..write_res]});
     }
     return write_res;
 }

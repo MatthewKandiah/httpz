@@ -62,16 +62,20 @@ pub fn main() !void {
     const sockaddr = lib.buildIpv4Addrinfo(localhost_address, server_port);
     lib.bind(socket, sockaddr);
     lib.listen(socket);
-    const connection_info = lib.acceptConnection(socket);
-    var buf: [1024]u8 = .{0} ** 1024;
-    var read_bytes: usize = 0;
-    while (read_bytes == 0) {
-        read_bytes = lib.read(connection_info.connfd, buf[0..100]);
+
+    var count: usize = 0;
+    while (true) : (count += 1) {
+        const connection_info = lib.acceptConnection(socket);
+        var buf: [1024]u8 = .{0} ** 1024;
+        var read_bytes: usize = 0;
+        while (read_bytes == 0) {
+            read_bytes = lib.read(connection_info.connfd, buf[0..100]);
+        }
+
+        var data_buf: [16]u8 = .{0} ** 16;
+        const data_byte_count = std.fmt.formatIntBuf(&data_buf, count, 10, .lower, .{});
+        _ = lib.write(connection_info.connfd, data_buf[0..data_byte_count]);
+
+        lib.close(connection_info.connfd);
     }
-
-    const data = "Hello client, from server";
-    _ = lib.write(connection_info.connfd, data);
-
-    lib.close(connection_info.connfd);
-    lib.close(socket);
 }
