@@ -28,6 +28,6 @@ pub fn main() void {
     const written_bytes = lib.write(platform, connection_info.connfd, data);
     lib.print(platform.std_out, "server written_bytes: {}\n", .{written_bytes});
 
-    // EOF read
-    // close
+    lib.close(platform, connection_info.connfd);
+    lib.close(platform, socket);
 }

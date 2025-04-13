@@ -22,5 +22,6 @@ pub fn main() void {
         lib.print(platform.std_out, "read_bytes: {}\n", .{read_bytes});
         lib.print(platform.std_out, "read data: {s}\n", .{buf[0..read_bytes]});
     }
-    // close
+
+    lib.close(platform, socket);
 }

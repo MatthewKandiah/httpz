@@ -115,6 +115,7 @@ pub fn read(p: Platform, socket: usize, buf: []u8) usize {
     const read_res = std.os.linux.read(@intCast(socket), buf.ptr, buf.len);
     if (read_res == -1) {
         p.printLine(p.std_err, "ERROR - failed to read");
+        errorExit();
     }
     return read_res;
 }
@@ -123,6 +124,17 @@ pub fn write(p: Platform, socket: usize, data: []const u8) usize {
     const write_res = std.os.linux.write(@intCast(socket), data.ptr, data.len);
     if (write_res == -1) {
         p.printLine(p.std_err, "ERROR - failed to write");
+        errorExit();
     }
     return write_res;
+}
+
+pub fn close(p: Platform, fd: usize) void {
+    const close_res = std.os.linux.close(@intCast(fd));
+    if (close_res == -1) {
+        p.printLine(p.std_err, "ERROR - failed to close socket");
+        errorExit();
+    } else {
+        printLine(p.std_out, "SUCCESS - closed socket");
+    }
 }
