@@ -4,12 +4,13 @@ const c = @cImport({
 });
 
 const lib = @import("./lib.zig");
+const server = @import("./server.zig");
 
 pub fn main() void {
     const platform = lib.Platform.init();
 
     const socket = lib.createSocket(platform);
-    lib.connect(platform, socket);
+    lib.connect(platform, socket, server.localhost_address, server.server_port);
     const data = "Hello server";
     const written_bytes = lib.write(platform, socket, data);
     lib.print(platform.std_out, "client written_bytes: {}\n", .{written_bytes});

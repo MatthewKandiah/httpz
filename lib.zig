@@ -86,8 +86,8 @@ pub const ConnectionInfo = struct {
     cliaddr: std.os.linux.sockaddr.in,
 };
 
-pub fn connect(p: Platform, socket: usize) void {
-    const sockaddr = buildIpv4Addrinfo(p, "127.0.0.1", 6969);
+pub fn connect(p: Platform, socket: usize, address: [:0]const u8, port: u16) void {
+    const sockaddr = buildIpv4Addrinfo(p, address, port);
     const connect_res = std.os.linux.connect(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (connect_res == -1) {
         printLine(p.std_err, "ERROR - failed to connect");

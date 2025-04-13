@@ -5,8 +5,8 @@ const c = @cImport({
 
 const lib = @import("./lib.zig");
 
-const localhost_address = "127.0.0.1";
-const server_port = 6969;
+pub const localhost_address = "127.0.0.1";
+pub const server_port = 6969;
 
 pub fn main() void {
     const platform = lib.Platform.init();
