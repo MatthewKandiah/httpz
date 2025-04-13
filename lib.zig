@@ -28,8 +28,9 @@ pub const Platform = struct {
         self.printOut("SUCCESS - " ++ fmt ++ "\n", args);
     }
 
-    pub fn reportError(self: Self, comptime fmt: []const u8, args: anytype) void {
+    pub fn reportError(self: Self, comptime fmt: []const u8, args: anytype) noreturn {
         self.printErr("ERROR - " ++ fmt ++ "\n", args);
+        errorExit();
     }
 };
 
@@ -54,7 +55,6 @@ pub fn createSocket() usize {
     const fd = std.os.linux.socket(c.AF_INET, c.SOCK_STREAM, 0);
     if (fd == -1) {
         platform.reportError("failed to open socket", .{});
-        errorExit();
     } else {
         platform.reportSuccess("openeed socket", .{});
     }
@@ -70,7 +70,6 @@ pub fn buildIpv4Addrinfo(address: [:0]const u8, port: u16) std.os.linux.sockaddr
     const addr_convert_res = c.inet_pton(c.AF_INET, address, &result.addr);
     if (addr_convert_res != 1) {
         platform.reportError("failed to convert address {s}", .{address});
-        errorExit();
     }
     return result;
 }
@@ -79,7 +78,6 @@ pub fn bind(socket: usize, sockaddr: std.os.linux.sockaddr.in) void {
     const bind_res = std.os.linux.bind(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (bind_res == -1) {
         platform.reportError("failed to bind socket", .{});
-        errorExit();
     } else {
         platform.reportSuccess("bound socket", .{});
     }
@@ -89,7 +87,6 @@ pub fn listen(socket: usize) void {
     const listen_res = std.os.linux.listen(@intCast(socket), 0);
     if (listen_res == -1) {
         platform.reportError("failed to listen to socket", .{});
-        errorExit();
     } else {
         platform.reportSuccess("listening to socket", .{});
     }
@@ -105,7 +102,6 @@ pub fn connect(socket: usize, address: [:0]const u8, port: u16) void {
     const connect_res = std.os.linux.connect(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (connect_res == -1) {
         platform.reportError("failed to connect", .{});
-        errorExit();
     } else {
         platform.reportSuccess("connected", .{});
     }
@@ -117,7 +113,6 @@ pub fn acceptConnection(socket: usize) ConnectionInfo {
     const connfd = std.os.linux.accept(@intCast(socket), @ptrCast(&res.cliaddr), @alignCast(@ptrCast(&cliaddrlen)));
     if (connfd == -1) {
         platform.reportError("failed to accept connection", .{});
-        errorExit();
     } else {
         platform.reportSuccess("accepted connection", .{});
     }
@@ -130,7 +125,6 @@ pub fn read(socket: usize, buf: []u8) usize {
     if (read_res == -1) {
         platform.printLine(platform.std_err, "ERROR - failed to read");
         platform.reportError("failed to read", .{});
-        errorExit();
     } else {
         platform.reportSuccess("read bytes: {}", .{read_res});
         platform.reportSuccess("read data: {s}", .{buf[0..read_res]});
@@ -140,9 +134,9 @@ pub fn read(socket: usize, buf: []u8) usize {
 
 pub fn write(socket: usize, data: []const u8) usize {
     const write_res = std.os.linux.write(@intCast(socket), data.ptr, data.len);
+    // TODO-Matt: when server is not running, write_res seems to give huge numbers, not -1 or data.len?
     if (write_res == -1) {
         platform.reportError("failed to write", .{});
-        errorExit();
     } else {
         platform.reportSuccess("wrote bytes to socket: {}", .{write_res});
     }
