@@ -9,6 +9,28 @@ const c = @cImport({
 pub const Platform = struct {
     std_out: File,
     std_err: File,
+
+    const Self = @This();
+
+    fn print(file: File, comptime fmt: []const u8, args: anytype) void {
+        std.fmt.format(file.writer(), fmt, args) catch {};
+    }
+
+    pub fn printOut(self: Self, comptime fmt: []const u8, args: anytype) void {
+        print(self.std_out, fmt, args);
+    }
+
+    pub fn printErr(self: Self, comptime fmt: []const u8, args: anytype) void {
+        print(self.std_err, fmt, args);
+    }
+
+    pub fn reportSuccess(self: Self, comptime fmt: []const u8, args: anytype) void {
+        self.printOut("SUCCESS - " ++ fmt ++ "\n", args);
+    }
+
+    pub fn reportError(self: Self, comptime fmt: []const u8, args: anytype) void {
+        self.printErr("ERROR - " ++ fmt ++ "\n", args);
+    }
 };
 
 pub var platform: Platform = undefined;
@@ -28,23 +50,13 @@ pub fn errorExit() noreturn {
     std.process.exit(1);
 }
 
-// TODO-Matt: maybe move to method on Platform, think we'll want a write function for sockets
-pub fn printLine(file: File, bytes: []const u8) void {
-    print(file, "{s}\n", .{bytes});
-}
-
-// TODO-Matt: maybe move to method on Platform, think we'll want a write function for sockets
-pub fn print(file: File, comptime fmt: []const u8, args: anytype) void {
-    std.fmt.format(file.writer(), fmt, args) catch {};
-}
-
 pub fn createSocket() usize {
     const fd = std.os.linux.socket(c.AF_INET, c.SOCK_STREAM, 0);
     if (fd == -1) {
-        printLine(platform.std_err, "ERROR - failed to open socket");
+        platform.reportError("failed to open socket", .{});
         errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - opened socket");
+        platform.reportSuccess("openeed socket", .{});
     }
     return fd;
 }
@@ -57,7 +69,8 @@ pub fn buildIpv4Addrinfo(address: [:0]const u8, port: u16) std.os.linux.sockaddr
     };
     const addr_convert_res = c.inet_pton(c.AF_INET, address, &result.addr);
     if (addr_convert_res != 1) {
-        print(platform.std_err, "ERROR - failed to convert address {s}\n", .{address});
+        platform.reportError("failed to convert address {s}", .{address});
+        errorExit();
     }
     return result;
 }
@@ -65,19 +78,20 @@ pub fn buildIpv4Addrinfo(address: [:0]const u8, port: u16) std.os.linux.sockaddr
 pub fn bind(socket: usize, sockaddr: std.os.linux.sockaddr.in) void {
     const bind_res = std.os.linux.bind(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (bind_res == -1) {
-        printLine(platform.std_err, "ERROR - failed to bind socket");
+        platform.reportError("failed to bind socket", .{});
+        errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - bound socket");
+        platform.reportSuccess("bound socket", .{});
     }
 }
 
 pub fn listen(socket: usize) void {
     const listen_res = std.os.linux.listen(@intCast(socket), 0);
     if (listen_res == -1) {
-        printLine(platform.std_err, "ERROR - failed to listen to socket");
+        platform.reportError("failed to listen to socket", .{});
         errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - listening to socket");
+        platform.reportSuccess("listening to socket", .{});
     }
 }
 
@@ -90,10 +104,10 @@ pub fn connect(socket: usize, address: [:0]const u8, port: u16) void {
     const sockaddr = buildIpv4Addrinfo(address, port);
     const connect_res = std.os.linux.connect(@intCast(socket), @ptrCast(&sockaddr), @sizeOf(@TypeOf(sockaddr)));
     if (connect_res == -1) {
-        printLine(platform.std_err, "ERROR - failed to connect");
+        platform.reportError("failed to connect", .{});
         errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - connected");
+        platform.reportSuccess("connected", .{});
     }
 }
 
@@ -102,10 +116,10 @@ pub fn acceptConnection(socket: usize) ConnectionInfo {
     var res: ConnectionInfo = undefined;
     const connfd = std.os.linux.accept(@intCast(socket), @ptrCast(&res.cliaddr), @alignCast(@ptrCast(&cliaddrlen)));
     if (connfd == -1) {
-        printLine(platform.std_err, "ERROR - failed to accept connection");
+        platform.reportError("failed to accept connection", .{});
         errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - accepted connection");
+        platform.reportSuccess("accepted connection", .{});
     }
     res.connfd = connfd;
     return res;
@@ -115,7 +129,11 @@ pub fn read(socket: usize, buf: []u8) usize {
     const read_res = std.os.linux.read(@intCast(socket), buf.ptr, buf.len);
     if (read_res == -1) {
         platform.printLine(platform.std_err, "ERROR - failed to read");
+        platform.reportError("failed to read", .{});
         errorExit();
+    } else {
+        platform.reportSuccess("read bytes: {}", .{read_res});
+        platform.reportSuccess("read data: {s}", .{buf[0..read_res]});
     }
     return read_res;
 }
@@ -123,8 +141,10 @@ pub fn read(socket: usize, buf: []u8) usize {
 pub fn write(socket: usize, data: []const u8) usize {
     const write_res = std.os.linux.write(@intCast(socket), data.ptr, data.len);
     if (write_res == -1) {
-        platform.printLine(platform.std_err, "ERROR - failed to write");
+        platform.reportError("failed to write", .{});
         errorExit();
+    } else {
+        platform.reportSuccess("wrote bytes to socket: {}", .{write_res});
     }
     return write_res;
 }
@@ -132,9 +152,9 @@ pub fn write(socket: usize, data: []const u8) usize {
 pub fn close(fd: usize) void {
     const close_res = std.os.linux.close(@intCast(fd));
     if (close_res == -1) {
-        platform.printLine(platform.std_err, "ERROR - failed to close socket");
+        platform.reportError("failed to close socket");
         errorExit();
     } else {
-        printLine(platform.std_out, "SUCCESS - closed socket");
+        platform.reportSuccess("closed socket", .{});
     }
 }

@@ -20,13 +20,10 @@ pub fn main() void {
     var read_bytes: usize = 0;
     while (read_bytes == 0) {
         read_bytes = lib.read(connection_info.connfd, buf[0..100]);
-        lib.print(lib.platform.std_out, "read_bytes: {}\n", .{read_bytes});
-        lib.print(lib.platform.std_out, "read data: {s}\n", .{buf[0..read_bytes]});
     }
 
     const data = "Hello client, from server";
-    const written_bytes = lib.write(connection_info.connfd, data);
-    lib.print(lib.platform.std_out, "server written_bytes: {}\n", .{written_bytes});
+    _ = lib.write(connection_info.connfd, data);
 
     lib.close(connection_info.connfd);
     lib.close(socket);
