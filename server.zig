@@ -24,7 +24,10 @@ pub fn main() void {
         lib.print(platform.std_out, "read data: {s}\n", .{buf[0..read_bytes]});
     }
 
-    // write
+    const data = "Hello client, from server";
+    const written_bytes = lib.write(platform, connection_info.connfd, data);
+    lib.print(platform.std_out, "server written_bytes: {}\n", .{written_bytes});
+
     // EOF read
     // close
 }
